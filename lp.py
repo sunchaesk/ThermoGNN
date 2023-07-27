@@ -127,20 +127,26 @@ def parse(input) -> dict:
     result = parser.parse(debug=False)
     return result
 
-class Node:
-    def __init__(zone_name, connections=None):
-        self.zone_name = zone_name
-        self.connections: List[str] = []
-        if connections != None:
-            assert isinstance(connections, list)
-            self.connections = connections
-
 def get_zone_list(parsed_idf):
     building_surfaces = parsed_idf['BUILDINGSURFACE:DETAILED']
     surfaces_set = set()
     for building_surface in building_surfaces:
         surfaces_set.add(building_surface[4])
     return list(surfaces_set)
+
+def get_solar_surface_list(parsed_idf):
+    '''
+    get surfaces + windows
+    '''
+    B_SOLAR = 8
+    NAME = 1
+    ret_list = []
+    for window in parsed_idf['WINDOW']:
+        ret_list.append(window[NAME])
+    for surface in parsed_idf['BUILDINGSURFACE:DETAILED']:
+        if surface[B_SOLAR] == 'SunExposed':
+            ret_list.append(surface[NAME])
+    return ret_list
 
 def get_surface_to_zone_dict(parsed_idf) -> dict:
     '''
@@ -308,9 +314,11 @@ if __name__ == "__main__":
     f = idf_file.read()
     res = parse(f)
 
-    #print(json.dumps(find_connections(res), indent=4))
-    l2 = main(res)
-    visualize_connections(l2)
+    #print(res['BUILDINGSURFACE:DETAILED'][0].index('NoSun'))
+    print(get_solar_surface_list(res))
+
+    # l2 = main(res)
+    # visualize_connections(l2)
     #pp.pprint(l2)
 
     #print(json.dumps(get_surface_to_zone_dict(res), indent=4))
