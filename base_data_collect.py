@@ -95,7 +95,7 @@ def _get_cost_signal(day_of_week, hour, minute):
 
 class EnergyPlusRunner:
 
-    def __init__(self, episode: int, env_config: Dict[str, Any], obs_queue: Queue, act_queue: Queue) -> None:
+    def __init__(self, episode: int, env_config: Dict[str, Any], obs_queue: Queue, act_queue: Queue, variables: dict) -> None:
         pp = pprint.PrettyPrinter(indent=4)
         self.episode = episode
         self.env_config = env_config
@@ -116,36 +116,12 @@ class EnergyPlusRunner:
         # request variables to be available during runtime
         self.request_variable_complete = False
 
-
-
-        self.variables = {'outdoor_temp': ('Site Outdoor Air Drybulb Temperature', 'Environment'), 'living_unit1_temp': ('Zone Air Temperature', 'living_unit1'), 'attic_unit1_temp': ('Zone Air Temperature', 'attic_unit1'),
-                          'ground_temp': ('Site Ground Temperature', 'Environment'), 'window_ldf_1.unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Window_ldf_1.unit1'),
-                          'window_ldb_1.unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Window_ldb_1.unit1'),
-                          'window_sdr_1.unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Window_sdr_1.unit1'),
-                          'window_sdl_1.unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Window_sdl_1.unit1'),
-                          'window_ldf_2.unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Window_ldf_2.unit1'),
-                          'window_ldb_2.unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Window_ldb_2.unit1'),
-                          'window_sdr_2.unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Window_sdr_2.unit1'),
-                          'window_sdl_2.unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Window_sdl_2.unit1'),
-                          'roof_front_unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Roof_front_unit1'),
-                          'roof_back_unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Roof_back_unit1'),
-                          'roof_right_unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Roof_right_unit1'),
-                          'roof_left_unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Roof_left_unit1'),
-                          'wall_ldf_1.unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Wall_ldf_1.unit1'),
-                          'wall_sdr_1.unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Wall_sdr_1.unit1'),
-                          'wall_ldb_1.unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Wall_ldb_1.unit1'),
-                          'wall_sdl_1.unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Wall_sdl_1.unit1'),
-                          'wall_ldf_2.unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Wall_ldf_2.unit1'),
-                          'wall_sdr_2.unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Wall_sdr_2.unit1'),
-                          'wall_ldb_2.unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Wall_ldb_2.unit1'),
-                          'wall_sdl_2.unit1_sky_diffuse': ('Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area', 'Wall_sdl_2.unit1'),
-                          'site_direct_solar': ('Site Direct Solar Radiation Rate per Area', 'Environment'), 'site_horizontal_infrared': ('Site Horizontal Infrared Radiation Rate per Area', 'Environment')}
-
         # below is declaration of variables, meters and actuators
         # this simulation will interact with
         # self.variables = {
         #     "outdoor_temp" : ("Site Outdoor Air Drybulb Temperature", "Environment"),
         #     "indoor_temp_living" : ("Zone Air Temperature", 'living_unit1'),
+        #     #'test_humidity': ("Zone Air Relative Humidity", "Ground"),
         #     'sky_diffuse_solar_ldf1': ("Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area", 'Window_ldf_1.unit1'),
         #     'sky_diffuse_solar_ldf2': ("Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area", 'Window_ldf_2.unit1'),
         #     'sky_diffuse_solar_ldb1': ("Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area", 'Window_ldb_1.unit1'),
@@ -156,10 +132,11 @@ class EnergyPlusRunner:
         #     'sky_diffuse_solar_sdl2': ("Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area", 'Window_sdl_2.unit1'),
         #     'site_direct_solar': ("Site Direct Solar Radiation Rate per Area", "Environment"),
         #     'site_horizontal_infrared': ("Site Horizontal Infrared Radiation Rate per Area", "Environment"),
-        #     #'outdoor_relative_humidity': ("Site Outdoor Air Relative Humidity", "Environment"),
+        #     'outdoor_relative_humidity': ("Site Outdoor Air Relative Humidity", "Environment"),
         #     'ground_temperature': ("Site Ground Temperature", "Environment"),
         #     'wall_ldf': ("Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area", "Wall_ldf_2.unit1")
         # }
+        self.variables = variables
         self.var_handles: Dict[str, int] = {}
 
         self.meters = {
@@ -350,11 +327,11 @@ class EnergyPlusRunner:
                                                      next_time_step[4])
         # self.next_obs['next_timestep_cost_signal'] = next_timestep_cost_signal
 
-        print('----------------------------')
-        print(self.next_obs)
-        print('LEN:', len(self.next_obs))
-        print('----------------------------') #
-        sys.exit(1)
+        # print('----------------------------')
+        # print(self.next_obs)
+        # print('LEN:', len(self.next_obs))
+        # print('----------------------------') #
+        #sys.exit(1)
         self.obs_queue.put(self.next_obs)
 
     def _send_actions(self, state_argument):
@@ -378,7 +355,7 @@ class EnergyPlusRunner:
         self.x.set_actuator_value(
             state=state_argument,
             actuator_handle=self.actuator_handles["heating_actuator_living"],
-            actuator_value=0
+            actuator_value=-100
         )
 
     def _init_callback(self, state_argument) -> bool:
@@ -441,7 +418,9 @@ class EnergyPlusEnv(gym.Env):
         self.episode = -1
         self.timestep = 0
 
-        obs_len = 38
+        self.variables = self.env_config['variables']
+
+        obs_len = len(self.variables.keys()) + 5
         low_obs = np.array(
             [-1e8] * obs_len
         )
@@ -482,6 +461,7 @@ class EnergyPlusEnv(gym.Env):
             env_config=self.env_config,
             obs_queue=self.obs_queue,
             act_queue=self.act_queue,
+            variables=self.variables
         )
         self.energyplus_runner.start()
 

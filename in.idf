@@ -100,7 +100,7 @@
     InteriorFurnishings,     !- Construction Name
     living_unit1,            !- Zone or ZoneList Name
     ,                        !- Space or SpaceList Name
-    500.0;        !- Surface Area {m2}
+    200.0;        !- Surface Area {m2}
 
   BuildingSurface:Detailed,
     Roof_front_unit1,        !- Name

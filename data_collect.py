@@ -14,24 +14,61 @@ collected data points:
 - the data generated is  formatted for PyG Data format
 '''
 
-import base as base
+import base_data_collect as base
+from base_data_collect import default_args
 import lp
 
 import os
 import sys
+import json
+import pickle
 
 import numpy as np
+import gymnasium as gym
 
-import json
+from collections import deque
+from typing import List, Tuple
 
 import torch
 import torch.nn as nn
 from torch_geometric.data import Data
 
-idf_path = './in.idf'
-idf_file = open(idf_path, 'r')
-f = idf_file.read()
-parsed_idf = lp.parse(f)
+class Buffer:
+    'Fixed sized buffer for collecting model data, for Eplus building model generation'
+    def __init__(self,
+                 buffer_size: int,
+                 data_collection_period_start: Tuple[int, int],
+                 data_collection_period_end: Tuple[int, int],
+                 data_collection_method: str,
+                 weather_region: str):
+        self.buffer = deque(maxlen=buffer_size)
+        self.buffer_size = buffer_size
+        self.weather_region = weather_region
+        self.data_collection_period_start = data_collection_period_start
+        self.data_collection_period_end = data_collection_period_end
+        self.episode = 0
+        # prob 'Random'
+        self.data_collection_method = data_collection_method
+        #self.experience = namedtuple("Experience", field_names=["state", "action", "next_state"])
+
+    def add(self, elem, pred):
+        #e = tuple(state)
+        e = elem
+        self.buffer.append([elem, pred])
+
+    def b_full(self):
+        if len(self.buffer) == self.buffer_size:
+            return True
+        else:
+            return False
+
+    def percentage_full(self):
+        return round(len(self.buffer) / self.buffer_size, 2)
+
+IDF_PATH = './in.idf'
+IDF_FILE = open(IDF_PATH, 'r')
+F = IDF_FILE.read()
+PARSED_IDF = lp.parse(F)
 
 def generate_eplus_variables(parsed_idf):
     ret_variables = dict()
@@ -47,6 +84,14 @@ def generate_eplus_variables(parsed_idf):
         ret_variables[key] = tuple(["Zone Air Temperature", zone])
     ret_variables['ground_temp'] = tuple(["Site Ground Temperature", "Environment"])
 
+    # get zone humidity
+    ret_variables['outdoor_humidity'] = tuple(["Site Outdoor Air Relative Humidity", "Environment"])
+    for zone in zone_list:
+        if zone == "Outdoors" or "ground" in zone.lower():
+            continue
+        key = (zone.replace('-', '_') + '_humidity').lower()
+        ret_variables[key] = tuple(["Zone Air Relative Humidity", zone])
+
     # get solar
     for solar_surface in solar_surfaces_list:
         key = (solar_surface.replace('-', '_') + '_sky_diffuse').lower()
@@ -60,8 +105,60 @@ def generate_eplus_variables(parsed_idf):
 
     return ret_variables
 
+def main_data_collector(num_episodes, load=True):
+    buf = Buffer(50000000000,
+                 tuple([5,1]),
+                 tuple([8,31]),
+                 'zero-heating-coolig',
+                 'Rochester International Arpt,MN,USA')
+
+    start_episode = 0
+
+    b_load = load
+    if b_load:
+        try:
+            p_f = open('./data/training_data.pt', 'rb')
+            buf = pickle.load(p_f)
+            start_episode = buf.episode
+            p_f.close()
+            print('#######################')
+            print('LOADING FROM training_data.pt...')
+            print('BUF SIZE:', len(buf.buffer))
+            print('#######################')
+            time.sleep(2)
+        except:
+            print('ERROR: ./data/training_data.pt not found... data collection from scratch')
+
+    variables_dict = generate_eplus_variables(PARSED_IDF)
+    buf.indices = {key: index for index, key in enumerate(variables_dict)}
+    default_args['variables'] = variables_dict
+    env = base.EnergyPlusEnv(default_args)
+    for episode in range(start_episode, num_episodes):
+        state = env.reset()
+        done = False
+        episode_datas = []
+        print('------------------COMPLETION: {}% / Iteration {}-----------------'.format(buf.percentage_full() * 100, episode))
+        while not done:
+            action = env.action_space.sample()
+            ret = n_state, reward, done, truncated, info = env.step(action)
+            # episode_datas.append(n_state.append(action).tolist())
+            add = state.tolist()
+            add.append(action)
+            buf.add(add, n_state[1])
+            state = n_state
+        #
+        buf.episode += 1
+        #buf.add(episode_datas)
+        if episode % 5 == 0 and episode != 0:
+            pickle_file = open('./data/training_data.pt' 'wb')
+            pickle.dump(buf, pickle_file)
+            pickle_file.close()
+    #
+    return buf
+    print('COMPLETED')
+
 def generate_graph_data(next_obs: dict) -> Data:
     pass
 
 if __name__ == "__main__":
-    print(generate_eplus_variables(parsed_idf))
+    main_data_collector(2)
