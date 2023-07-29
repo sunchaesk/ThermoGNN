@@ -433,7 +433,7 @@ class EnergyPlusEnv(gym.Env):
         self.last_obs = {}
 
         # action space: supply air temperature (100 possible values)
-        self.action_space: Discrete = Discrete(151)
+        self.action_space: Discrete = Discrete(61)
 
         self.energyplus_runner: Optional[EnergyPlusRunner] = None
         self.obs_queue: Optional[Queue] = None

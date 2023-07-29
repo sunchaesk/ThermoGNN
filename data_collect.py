@@ -51,10 +51,10 @@ class Buffer:
         self.data_collection_method = data_collection_method
         #self.experience = namedtuple("Experience", field_names=["state", "action", "next_state"])
 
-    def add(self, elem, pred):
+    def add(self, elem):
         #e = tuple(state)
         e = elem
-        self.buffer.append([elem, pred])
+        self.buffer.append(elem)
 
     def b_full(self):
         if len(self.buffer) == self.buffer_size:
@@ -144,13 +144,14 @@ def main_data_collector(num_episodes, load=True):
             # episode_datas.append(n_state.append(action).tolist())
             add = state.tolist()
             add.append(action)
-            buf.add(add, n_state[1])
+            episode_datas.append([add, n_state[1]])
+            #buf.add(add, n_state[1])
             state = n_state
         #
         buf.episode += 1
-        #buf.add(episode_datas)
+        buf.add(episode_datas)
         if episode % 5 == 0 and episode != 0:
-            pickle_file = open('./data/training_data.pt' 'wb')
+            pickle_file = open('./data/training_data.pt', 'wb')
             pickle.dump(buf, pickle_file)
             pickle_file.close()
     #
@@ -161,4 +162,4 @@ def generate_graph_data(next_obs: dict) -> Data:
     pass
 
 if __name__ == "__main__":
-    main_data_collector(2)
+    main_data_collector(10000)
