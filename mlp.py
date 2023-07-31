@@ -160,6 +160,7 @@ for epoch in range(n_epochs):
     with tqdm.tqdm(batch_start, unit="batch", mininterval=0, disable=True) as bar:
         bar.set_description(f"Epoch {epoch}")
         for start in bar:
+            print('start:', start)
             # take a batch
             X_batch = X_train[start:start+batch_size]
             y_batch = y_train[start:start+batch_size]

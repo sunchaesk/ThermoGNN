@@ -36,11 +36,11 @@ from torch_geometric.data import Data
 class Buffer:
     'Fixed sized buffer for collecting model data, for Eplus building model generation'
     def __init__(self,
-                 buffer_size: int,
-                 data_collection_period_start: Tuple[int, int],
-                 data_collection_period_end: Tuple[int, int],
-                 data_collection_method: str,
-                 weather_region: str):
+                 buffer_size: int = 5000000000,
+                 data_collection_period_start: Tuple[int, int] = [1,1],
+                 data_collection_period_end: Tuple[int, int] = [12,31],
+                 data_collection_method: str = 'random',
+                 weather_region: str = 'rochester'):
         self.buffer = deque(maxlen=buffer_size)
         self.buffer_size = buffer_size
         self.weather_region = weather_region

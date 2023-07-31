@@ -265,11 +265,11 @@ class EnergyPlusRunner:
         day_of_week = self.x.day_of_week(self.energyplus_state)
 
         # decompose hour of week to day_of_week & hour
-        self.next_obs['year'] = year
-        self.next_obs['hour'] = hour
-        self.next_obs['day_of_week'] = day_of_week
-        self.next_obs['day'] = day
-        self.next_obs['month'] = month
+        self.next_obs['year'] = year # 29
+        self.next_obs['hour'] = hour # 30
+        self.next_obs['day_of_week'] = day_of_week # 31
+        self.next_obs['day'] = day # 32
+        self.next_obs['month'] = month # 33
 
 
 
