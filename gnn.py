@@ -17,7 +17,10 @@ from torch_geometric.utils import to_networkx
 from torch.utils.data import DataLoader
 import torch_geometric
 from torch_geometric_temporal.signal import temporal_signal_split, StaticGraphTemporalSignal
-from torch_geometric_temporal.nn.recurrent import DCRNN, A3TGCN
+from torch_geometric_temporal.nn.recurrent import DCRNN, A3TGCN, TGCN
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
+
+from itertools import cycle
 
 from buffer import Buffer
 import pickle
@@ -34,14 +37,16 @@ class ThermoModelDatasetLoader(object):
         pf = open(self.data_file_path, 'rb')
         self.gnn_data = pickle.load(pf)
         pf.close()
-        self.edge_index = torch.tensor([[2,3],
-                               [3,2],
-                               [0,2],
-                               [2,0],
-                               [3,0],
-                               [0,3],
-                               [2,1],
-                               [1,2]], dtype=torch.long)
+        self.edge_index = torch.tensor([[2,3,0,2,3,0,2,1],
+                                        [3,2,2,0,0,3,1,2]], dtype=torch.long)
+        # self.edge_index = torch.tensor([[2,3],
+        #                        [3,2],
+        #                        [0,2],
+        #                        [2,0],
+        #                        [3,0],
+        #                        [0,3],
+        #                        [2,1],
+        #                        [1,2]], dtype=torch.long)
         self.edge_weights = torch.tensor([1,1,1,1,1,1,1,1], dtype=torch.float)
 
         self.x = self.gnn_data[0]
@@ -162,6 +167,12 @@ def GNN_data_process():
 
             y_list.append(np.array([curr_data[1]], dtype='double'))
 
+    # StandardScaler
+    x_list = np.array(x_list)
+    x_scaler = StandardScaler()
+    x_list = x_scaler.fit_transform(x_list.reshape(-1, x_list.shape[-1])).reshape(x_list.shape)
+    x_list = x_list.tolist()
+
     GNN_training_pf = open('./data/gnn_processed_training_data.pt', 'wb')
     pickle.dump([x_list, np.array(y_list, dtype='double')], GNN_training_pf)
     GNN_training_pf.close()
@@ -181,30 +192,53 @@ def GNN_data_process():
 #     gnn_data_pf.close()
 
 # Pytorch geometric temporal
+thermo_data = ThermoModelDatasetLoader('./data/gnn_processed_training_data.pt')
+gnn_training_dataset = thermo_data.get_dataset()
+
+train_dataset, test_dataset = temporal_signal_split(gnn_training_dataset, train_ratio=0.01)
+print('DATASET READY')
 
 class RecurrentGCN(torch.nn.Module):
     def __init__(self, node_features, hidden_channels):
         super(RecurrentGCN, self).__init__()
-        self.recurrent1 = A3TGCN(node_features, hidden_channels, 1)
-        self.recurrent2 = A3TGCN(hidden_channels, hidden_channels, 1)
-        self.linear  = nn.Linear(hidden_channels, 1)
+        self.recurrent1 = TGCN(node_features, hidden_channels)
+        self.recurrent2 = TGCN(hidden_channels, hidden_channels)
+        self.linear1  = nn.Linear(hidden_channels, hidden_channels)
+        self.b_norm1 = nn.BatchNorm1d(hidden_channels)
+        self.linear2 = nn.Linear(hidden_channels, 1)
 
     def forward(self, x, edge_index):
         h = self.recurrent1(x, edge_index)
         h = F.relu(h)
-        h = F.dropout(h, p=0.5, training=self.training)
-        h = self.recurrent2(x, edge_index)
-        h = F.relu(h)
-        h = self.linear(h)
-        return h
+        h = self.recurrent2(h, edge_index)
+        # print('h:', h)
+        #h = self.recurrent2()
+        y = F.relu(h)
+        h = F.dropout(y, p=0.5, training=self.training)
+        #h = self.recurrent2(x, edge_index)
+        #h = F.relu(h)
+        y = self.linear1(y)
+        y = self.b_norm1(y)
+        y = F.relu(y)
+        y = self.linear2(y)
+        # print('y:', y)
+        return y[2]
 
 def train_gnn():
     model = RecurrentGCN(node_features=8, hidden_channels=30)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     loss_fn = nn.MSELoss()
     model.train()
+    losses = []
+    best_loss = float('inf')
+
+    batch_size = 5000
     for epoch in tqdm.tqdm(range(10000)):
+        count = 0
         for time, snapshot in enumerate(train_dataset):
+            count += 1
+            if count >= batch_size:
+                break
             y_hat = model(snapshot.x, snapshot.edge_index)
             loss = loss_fn(y_hat, snapshot.y)
             loss = torch.sqrt(loss)
@@ -212,15 +246,28 @@ def train_gnn():
             optimizer.step()
             optimizer.zero_grad()
 
-        if epoch % 5 == 0 and epoch != 0:
+        if epoch % 1 == 0 and epoch != 0:
+            start = ttt.time()
             model.eval()
             loss = 0
-            time = None
-            for time, snapshot in enumerate(train_dataset):
+            test_count = 0
+            for time, snapshot in enumerate(test_dataset):
+                test_count += 1
+                # if test_count >= 5000:
+                #     break
                 y_hat = model(snapshot.x, snapshot.edge_index)
                 loss_temp = loss_fn(y_hat, snapshot.y)
-                loss += torch.sqrt(loss_temp)[0]
-            loss = loss / (time + 1)
+                loss += torch.sqrt(loss_temp)
+            end = ttt.time()
+            print('time:', end-start)
+            sys.exit(1)
+            loss = loss / (test_count + 1)
+            loss = loss.item()
+            losses.append(loss)
+            print('losses:', losses)
+            if loss < best_loss:
+                best_loss = loss
+                torch.save(model, './data/training_gnn_model_temp.pt')
             print('LOSS EPOCH{}'.format(epoch) + ' ' + str(loss))
 
 # def train_gnn():
@@ -248,15 +295,12 @@ def train_gnn():
 #             loss = torch.sqrt(loss) # calculuate RMSE
 
 if __name__ == "__main__":
-    thermo_data = ThermoModelDatasetLoader('./data/gnn_processed_training_data.pt')
-    gnn_training_dataset = thermo_data.get_dataset()
+    # for time, snapshot in enumerate(train_dataset):
+    #     print('time:', time)
+    #     print('snapshot:', snapshot, type(snapshot))
+    #     print('snapshot data:', snapshot.y)
+    #     ttt.sleep(1.5)
 
-    train_dataset, test_dataset = temporal_signal_split(gnn_training_dataset, train_ratio=0.2)
-    for time, snapshot in enumerate(train_dataset):
-        print('time:', time)
-        print('snapshot:', snapshot, type(snapshot))
-        ttt.sleep(1.5)
-
-    #GNN_data_process()
+    # GNN_data_process()
     train_gnn()
     print('done')

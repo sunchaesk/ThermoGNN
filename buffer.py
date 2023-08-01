@@ -1,3 +1,7 @@
+
+from collections import deque
+from typing import List, Tuple
+
 class Buffer:
     'Fixed sized buffer for collecting model data, for Eplus building model generation'
     def __init__(self,
