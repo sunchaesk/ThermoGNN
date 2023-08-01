@@ -24,4 +24,4 @@ def plot_file(f_name, label_str, title):
 
 
 if __name__ == "__main__":
-    plot_file('./RNN_loss.txt', 'RNN loss', 'RNN loss')
+    plot_file('./tgnn_log.txt', 'PyG temporal', 'TGCN Loss')
