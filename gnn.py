@@ -3,6 +3,7 @@ import tqdm
 
 import os
 import sys
+import time as ttt
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,7 +19,7 @@ import torch_geometric
 from torch_geometric_temporal.signal import temporal_signal_split, StaticGraphTemporalSignal
 from torch_geometric_temporal.nn.recurrent import DCRNN, A3TGCN
 
-from data_collect import Buffer
+from buffer import Buffer
 import pickle
 
 class ThermoModelDatasetLoader(object):
@@ -41,7 +42,7 @@ class ThermoModelDatasetLoader(object):
                                [0,3],
                                [2,1],
                                [1,2]], dtype=torch.long)
-        self.edge_weights = torch.tensor([1,1,1,1,1,1,1], dtype=torch.float)
+        self.edge_weights = torch.tensor([1,1,1,1,1,1,1,1], dtype=torch.float)
 
         self.x = self.gnn_data[0]
         self.y = self.gnn_data[1]
@@ -101,10 +102,10 @@ def GNN_data_process():
 
     for buffer_episode in tqdm.tqdm(buf.buffer):
         #for curr_data in buffer_episode:
-        for i in range(1,len(buffer_episode)):
+        for i in range(0,len(buffer_episode)):
             x = [] # feature matrix -> shape [num_nodes, num_node_features]
 
-            curr_data = buffer_episode[i - 1]
+            curr_data = buffer_episode[i]
             curr_timestep = curr_data[0]
             # compute outdoor stuff: 0 diffuse solar?
             outdoor_feature = []
@@ -159,61 +160,10 @@ def GNN_data_process():
 
             x_list.append(x)
 
-            y = []
-            next_data = buffer_episode[i]
-            curr_timestep = next_data[0]
-            outdoor_feature = []
-            outdoor_feature.append(curr_timestep[0])
-            outdoor_feature.append(curr_timestep[4])
-            outdoor_feature.append(curr_timestep[27])
-            outdoor_feature.append(curr_timestep[28])
-            outdoor_feature.append(0) # Outdoor has 0 direct solar?
-            outdoor_feature.append(curr_timestep[30])
-            outdoor_feature.append(curr_timestep[31])
-            outdoor_feature.append(1000) # action
-            x.append(outdoor_feature)
-
-            ground_feature = []
-            ground_feature.append(curr_timestep[3])
-            ground_feature.append(0) # ground humidity is set to 0
-            ground_feature.append(curr_timestep[27])
-            ground_feature.append(curr_timestep[28])
-            ground_feature.append(0) # ground doesn't have diffuse solar
-            ground_feature.append(curr_timestep[30])
-            ground_feature.append(curr_timestep[31])
-            ground_feature.append(1000) # action
-            x.append(ground_feature)
-
-            living_feature = []
-            living_feature.append(curr_timestep[1])
-            living_feature.append(curr_timestep[5])
-            living_feature.append(curr_timestep[27])
-            living_feature.append(curr_timestep[28])
-            living_diffuse_solar = 0
-            for index in [7,8,9,10,11,12,13,14,19,20,21,22,23,24,25,26]:
-                living_diffuse_solar += curr_timestep[index]
-            living_feature.append(living_diffuse_solar)
-            living_feature.append(curr_timestep[30])
-            living_feature.append(curr_timestep[31])
-            living_feature.append(curr_timestep[-1]) # action
-            x.append(living_feature)
-
-            attic_feature = []
-            attic_feature.append(curr_timestep[2])
-            attic_feature.append(curr_timestep[6])
-            attic_feature.append(curr_timestep[27])
-            attic_feature.append(curr_timestep[28])
-            attic_diffuse_solar = 0
-            for index in [15,16,17,18]:
-                attic_diffuse_solar += curr_timestep[index]
-            attic_feature.append(attic_diffuse_solar)
-            attic_feature.append(curr_timestep[30])
-            attic_feature.append(curr_timestep[31])
-            attic_feature.append(1000) # action
-            x.append(attic_feature)
+            y_list.append(np.array([curr_data[1]], dtype='double'))
 
     GNN_training_pf = open('./data/gnn_processed_training_data.pt', 'wb')
-    pickle.dump([x_list, torch.tensor(y_list, dtype=torch.double)], GNN_training_pf)
+    pickle.dump([x_list, np.array(y_list, dtype='double')], GNN_training_pf)
     GNN_training_pf.close()
     print('DATA processing completed')
 
@@ -231,17 +181,13 @@ def GNN_data_process():
 #     gnn_data_pf.close()
 
 # Pytorch geometric temporal
-thermo_data = ThermoModelDatasetLoader('./data/gnn_processed_training_data.pt')
-gnn_training_dataset = thermo_data.get_dataset()
-
-train_dataset, test_dataset = temporal_signal_split(gnn_training_dataset, train_ratio=0.2)
 
 class RecurrentGCN(torch.nn.Module):
     def __init__(self, node_features, hidden_channels):
         super(RecurrentGCN, self).__init__()
         self.recurrent1 = A3TGCN(node_features, hidden_channels, 1)
         self.recurrent2 = A3TGCN(hidden_channels, hidden_channels, 1)
-        self.linear  = nn.Linear(32, 1)
+        self.linear  = nn.Linear(hidden_channels, 1)
 
     def forward(self, x, edge_index):
         h = self.recurrent1(x, edge_index)
@@ -253,7 +199,7 @@ class RecurrentGCN(torch.nn.Module):
         return h
 
 def train_gnn():
-    model = RecurrentGCN(node_features=7, hidden_channels=20)
+    model = RecurrentGCN(node_features=8, hidden_channels=30)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
     loss_fn = nn.MSELoss()
     model.train()
@@ -302,5 +248,15 @@ def train_gnn():
 #             loss = torch.sqrt(loss) # calculuate RMSE
 
 if __name__ == "__main__":
-    GNN_data_process()
-    # train_gnn()
+    thermo_data = ThermoModelDatasetLoader('./data/gnn_processed_training_data.pt')
+    gnn_training_dataset = thermo_data.get_dataset()
+
+    train_dataset, test_dataset = temporal_signal_split(gnn_training_dataset, train_ratio=0.2)
+    for time, snapshot in enumerate(train_dataset):
+        print('time:', time)
+        print('snapshot:', snapshot, type(snapshot))
+        ttt.sleep(1.5)
+
+    #GNN_data_process()
+    train_gnn()
+    print('done')
