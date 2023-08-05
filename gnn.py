@@ -33,18 +33,10 @@ class ThermoStaticGraphLoader(object):
                                         [3,2,2,0,0,3,1,2]], dtype=torch.long)
         self.edge_weights = torch.tensor([1,1,1,1,1,1,1,1], dtype=torch.float)
 
-        x = self.gnn_data[0]
+        self.x = self.gnn_data[0]
         self.y = self.gnn_data[1]
         del self.gnn_data
         gc.collect()
-
-        for i in range(len(self.y)):
-            scaler = StandardScaler()
-            slc = x[:,:,:,i].reshape()
-
-        print('x:', x[0][0])
-        print('y:', y[0][0])
-        sys.exit(1)
 
         self.snapshot_count = len(self.x)
 

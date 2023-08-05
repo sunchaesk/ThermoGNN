@@ -19,11 +19,10 @@ from torch_geometric_temporal.signal import StaticGraphTemporalSignal
 
 from sklearn.preprocessing import StandardScaler
 
-pf = open('./data/save_training_data.pt', 'rb')
+pf = open('./data/gnn_scaled_data.pt', 'rb')
 raw_data = pickle.load(pf)
-raw_data = raw_data.buffer
-print('rawdata:', raw_data[0][0])
-sys.exit(1)
+#raw_data = raw_data.buffer
+print('raw_data len:', len(raw_data))
 # 111 episodes
 # for each timestep in each episode
 # [[obs], y]
@@ -33,6 +32,7 @@ overlap_chunk_data = []
 sequence_length = 20
 def overlap_sequences(data, sequence_length):
     overlapping_sequences = [data[i:i + sequence_length] for i in range(len(data) - sequence_length + 1)]
+    #print('overlapping seq:', overlapping_sequences)
     return overlapping_sequences
 for episode in raw_data:
     overlap_chunk_data.extend(overlap_sequences(episode, sequence_length))
@@ -135,7 +135,7 @@ for chunk_data in tqdm.tqdm(overlap_chunk_data):
 
 del overlap_chunk_data
 gc.collect()
-print(len(x_t_list), x_t_list[0].shape)
+#print(len(x_t_list), x_t_list[0].shape)
 print('done')
 pf = open('./data/gnn_data.pt', 'wb')
 pickle.dump([x_t_list, y_t_list], pf)
