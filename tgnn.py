@@ -118,7 +118,7 @@ def GNN_data_process():
             outdoor_feature.append(curr_timestep[4])
             outdoor_feature.append(curr_timestep[27])
             outdoor_feature.append(curr_timestep[28])
-            outdoor_feature.append(0) # Outdoor has 0 direct solar?
+            outdoor_feature.append(0) # outdoor has 0 direct solar?
             outdoor_feature.append(curr_timestep[30])
             outdoor_feature.append(curr_timestep[31])
             outdoor_feature.append(1000) # action
@@ -196,7 +196,12 @@ thermo_data = ThermoModelDatasetLoader('./data/gnn_processed_training_data.pt')
 gnn_training_dataset = thermo_data.get_dataset()
 
 train_dataset, test_dataset = temporal_signal_split(gnn_training_dataset, train_ratio=0.15)
+print(type(train_dataset.features[0]), type(test_dataset.targets[0]))
+print(train_dataset.features[0])
+print(train_dataset.targets[0])
 print('DATASET READY')
+
+sys.exit(1)
 
 
 class RecurrentGCN(torch.nn.Module):
