@@ -14,7 +14,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch_geometric
 from torch_geometric_temporal.signal import StaticGraphTemporalSignal, temporal_signal_split
-from torch_geometric_temporal.nn.recurrent import A3TGCN
+from torch_geometric_temporal.nn.recurrent import A3TGCN, TGCN
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.base import TransformerMixin
@@ -62,20 +62,22 @@ train_dataset, test_dataset = temporal_signal_split(dataset, train_ratio=0.8)
 print("Number of train buckets: ", len((train_dataset.features)))
 print("Number of test buckets: ", len((test_dataset.features)))
 
+
 class TemporalGNN(torch.nn.Module):
-    def __init__(self, node_features, periods):
+    def __init__(self, node_features, periods, hidden_size):
         super(TemporalGNN, self).__init__()
         # Attention Temporal Graph Convolutional Cell
         self.tgnn = A3TGCN(in_channels=node_features,
-                           out_channels=16,
+                           out_channels=hidden_size,
                            periods=periods)
         # Equals single-shot prediction
         self.drop1 = torch.nn.Dropout(p=0.5)
-        self.recur1 = torch.nn.RNN(16,16)
-        self.batch1 = torch.nn.BatchNorm1d(16)
-        self.recur2 = torch.nn.RNN(16,16)
-        self.batch2 = torch.nn.BatchNorm1d(16)
-        self.out = torch.nn.Linear(16, periods)
+        self.linear1 = torch.nn.Linear(hidden_size, hidden_size)
+        self.recur1 = torch.nn.RNN(hidden_size,hidden_size)
+        self.batch1 = torch.nn.BatchNorm1d(hidden_size)
+        self.recur2 = torch.nn.RNN(hidden_size, hidden_size)
+        self.batch2 = torch.nn.BatchNorm1d(hidden_size)
+        self.out = torch.nn.Linear(hidden_size, periods)
 
     def forward(self, x, edge_index):
         """
@@ -85,8 +87,9 @@ class TemporalGNN(torch.nn.Module):
         h = self.tgnn(x, edge_index)
         h = self.drop1(h)
         h = F.relu(h)
-        h, _ = self.recur1(h)
-        h = self.batch1(h)
+        # h, _ = self.recur1(h)
+        # h = self.batch1(h)
+        h = self.linear1(h)
         h = F.relu(h)
         # h, _ = self.recur2(h)
         # h = self.batch2(h)
@@ -95,7 +98,7 @@ class TemporalGNN(torch.nn.Module):
         return h
 
 device = torch.device('cpu')
-model = TemporalGNN(node_features=8, periods=20).to(device)
+model = TemporalGNN(node_features=8, periods=20, hidden_size=15).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 loss_fn = nn.MSELoss()
 

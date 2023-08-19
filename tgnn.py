@@ -121,7 +121,7 @@ def GNN_data_process():
             outdoor_feature.append(0) # outdoor has 0 direct solar?
             outdoor_feature.append(curr_timestep[30])
             outdoor_feature.append(curr_timestep[31])
-            outdoor_feature.append(1000) # action
+            outdoor_feature.append(0) # action
             x.append(outdoor_feature)
 
             ground_feature = []
@@ -132,7 +132,7 @@ def GNN_data_process():
             ground_feature.append(0) # ground doesn't have diffuse solar
             ground_feature.append(curr_timestep[30])
             ground_feature.append(curr_timestep[31])
-            ground_feature.append(1000) # action
+            ground_feature.append(0) # action
             x.append(ground_feature)
 
             living_feature = []
@@ -160,7 +160,7 @@ def GNN_data_process():
             attic_feature.append(attic_diffuse_solar)
             attic_feature.append(curr_timestep[30])
             attic_feature.append(curr_timestep[31])
-            attic_feature.append(1000) # action
+            attic_feature.append(0) # action
             x.append(attic_feature)
 
             x_list.append(x)
@@ -200,8 +200,6 @@ print(type(train_dataset.features[0]), type(test_dataset.targets[0]))
 print(train_dataset.features[0])
 print(train_dataset.targets[0])
 print('DATASET READY')
-
-sys.exit(1)
 
 
 class RecurrentGCN(torch.nn.Module):
