@@ -128,10 +128,11 @@ def parse(input) -> dict:
     return result
 
 def get_zone_list(parsed_idf):
+    ZONE_NAME = 4
     building_surfaces = parsed_idf['BUILDINGSURFACE:DETAILED']
     surfaces_set = set()
     for building_surface in building_surfaces:
-        surfaces_set.add(building_surface[4])
+        surfaces_set.add(building_surface[ZONE_NAME])
     return list(surfaces_set)
 
 def get_solar_surface_list(parsed_idf):

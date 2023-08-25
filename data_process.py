@@ -71,7 +71,7 @@ for chunk_data in tqdm.tqdm(overlap_chunk_data):
         outdoor_feature.append(0) # outdoor has 0 direct solar?
         outdoor_feature.append(curr_timestep[30])
         outdoor_feature.append(curr_timestep[31])
-        outdoor_feature.append(1000) # action
+        outdoor_feature.append(0) # action
         x.append(np.array(outdoor_feature))
 
         ground_feature = []
@@ -82,7 +82,7 @@ for chunk_data in tqdm.tqdm(overlap_chunk_data):
         ground_feature.append(0) # ground doesn't have diffuse solar
         ground_feature.append(curr_timestep[30])
         ground_feature.append(curr_timestep[31])
-        ground_feature.append(1000) # action
+        ground_feature.append(0) # action
         x.append(np.array(ground_feature))
 
         living_feature = []
@@ -110,7 +110,7 @@ for chunk_data in tqdm.tqdm(overlap_chunk_data):
         attic_feature.append(attic_diffuse_solar)
         attic_feature.append(curr_timestep[30])
         attic_feature.append(curr_timestep[31])
-        attic_feature.append(1000) # action
+        attic_feature.append(0) # action
         x.append(np.array(attic_feature))
 
         #print(x, len(x), len(x[0]))
@@ -135,9 +135,11 @@ for chunk_data in tqdm.tqdm(overlap_chunk_data):
 
 del overlap_chunk_data
 gc.collect()
-#print(len(x_t_list), x_t_list[0].shape)
+
+
+print(len(x_t_list), x_t_list[0].shape)
 print('done')
-pf = open('./data/gnn_data.pt', 'wb')
+pf = open('./data/gnn_training_data_chunk.pt', 'wb')
 pickle.dump([x_t_list, y_t_list], pf)
 pf.close()
 print('joblib saved')

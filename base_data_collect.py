@@ -419,6 +419,7 @@ class EnergyPlusEnv(gym.Env):
         self.timestep = 0
 
         self.variables = self.env_config['variables']
+        print(self.env_config['variables'])
 
         obs_len = len(self.variables.keys()) + 5
         low_obs = np.array(
