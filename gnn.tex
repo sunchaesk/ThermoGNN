@@ -1,0 +1,41 @@
+
+\documentclass[12pt]{article}
+\begin{document}
+
+\title{Graph Neural Networks}
+
+\maketitle
+
+
+\section{Graph Neural Networks}
+Graph Neural Networks (GNN) are a recent subfield of machine learning for processing data that can be represented as graphs. More generally, graph neural network belongs to the class of ``Geometric Neural Networks''.
+
+Graph neural networks can be used for data without order preference, and can be applied to irregular non-Euclidean data structures such as chemical molecules, social networks, meshes, etc.
+
+\section{GNN Layer Architectures}
+There are 3 main architectures for GNNs: Permutation equivariant, local pooling, and global pooling (permutation invariant).
+\subsection{Permutation Equivariant Layer}
+Permutation equivariant layer maps a representation of the graph into an updated representation of the same graph.
+\subsection{Local Pooling Layer}
+Local pooling layer `coarsens` the given graph structure by convoluting a local structure of nodes into a smaller set of nodes.
+\subsection{Global Pooling (permutation invariant) Layer}
+Global pooling layer aggregates the given graph structure into a single output. The layer is ``permutation invariant'' as the output of the layer shouldn't be dependent on the ordering of the node aggregation.
+
+\section{Graph Convolutional Network}
+Graph Convolutional Network is a convolutional layer that generalizes over all toplogies unlike traditional convolutional layer which only operates on grid-like Euclidean data.
+
+Given a graph as an input, the output will return a set of updated node features that have aggregated the local nodes' features and of itself.
+
+A single pass into the grah convolutional layer will have a receptive field of 1-hop, meaning the update will aggregate features of nodes that are 1 away from the node being updated. k number of graph convolutional layer will correspond to the nodes having a receptive field of k hops.
+
+\section{Manifold Learning}
+Manifold learning, also referred to as nonlinear dimensionality reduction refers to techniques that attempt to reduce high-dimensional data into lower-dimensional data.
+
+GNNs although not explicitly a dimensionality reduction methodology, can be designed to exploit the local dynamics throughout the graph. As a result, given a high-dimensional data that is known to have dynamics defined locally, can be broken up into subsets of local interactions.
+
+\section{Speculations of GNNs in building science}
+Many layers of the operations and dynamics within buildings can be understood as graph structured data.
+
+For instance, the thermal interactions between building components will have high-dimensionality due to the complexity of the buildings, the heat-exchange interactions are dominated by the spatially local building components, and a GNN trained on the local heat exchange dynamics can potential be used to infer about the entire building heat exchange data.
+
+\end{document}

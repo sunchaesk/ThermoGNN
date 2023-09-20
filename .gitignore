@@ -4,3 +4,5 @@ parsetab.py
 data/
 __pycache__
 example/
+gnn.aux
+gnn.log

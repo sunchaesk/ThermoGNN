@@ -153,6 +153,7 @@ num_test = len(test_list)
 
 print(train_dataset[0], type(train_dataset[0]))
 print('complete')
+exit(1)
 
 epoch = 0
 best_loss = float('inf')
